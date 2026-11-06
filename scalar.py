@@ -1,5 +1,4 @@
-import numpy as np
-from math import sqrt
+from math import sqrt, log
 
 
 class Scalar:
@@ -36,9 +35,18 @@ class Scalar:
         self._update_error()
         return self
 
+    def setName(self, name: str) -> Scalar:
+        self.name = name
+        return self
+
     def _update_error(self):
         new = sqrt(
-            sum([(dependencie._error * diff) ** 2 for (dependencie, diff) in self._dep.items()])
+            sum(
+                [
+                    (dependencie._error * round(diff, 14)) ** 2
+                    for (dependencie, diff) in self._dep.items()
+                ]
+            )
         )
         self.error = new
         return new
@@ -132,4 +140,21 @@ class Scalar:
 
         out = other / self
         out.name = f"{other.name} / {self.name}"
+        return out
+
+    def __pow__(self, other):
+        if not isinstance(other, Scalar):
+            other = Scalar(other, name=str(other))
+
+        out_value = self.value**other.value
+        out_name = f"{self.name} ** {other.name}"
+        out = Scalar(out_value, out_name)
+
+        uniques = set(self._dep.keys()) | set(other._dep.keys())
+        for u in uniques:
+            out._dep[u] = other.value * (self.value ** (other.value - 1)) * self._dep.get(
+                u, 0.0
+            ) + log(self.value) * (self.value**other.value) * other._dep.get(u, 0.0)
+
+        out._update_error()
         return out
