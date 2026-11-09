@@ -9,9 +9,9 @@
 
 ### Datenklassen
 
-- **Messung:** Messreihen, die den "gleichen" Wert `n`-Mal messen `(n,)`.
-- **Variation:** Reihen, die `m` verschiedenen Werte, z.B. in Abhängigkeit einer anderen Größe, messen `(n,m)`.
-- **Versuchsblock:** `k` zusammengehöreige Variationen `(n,m,k)`.
+- **Measurement:** Messreihen, die den "gleichen" Wert `n`-Mal messen `(n,)`.
+- **Series:** Reihen, die `m` verschiedenen Werte, z.B. in Abhängigkeit einer anderen Größe, messen `(n,m)`.
+- **Block:** `k` zusammengehöreige Variationen `(n,m,k)`.
 
 <!-- - Falls benötigt, könnten auch mehrdiemnsionale Messungen und Kontrollvariablen nützlich sein. -->
 
