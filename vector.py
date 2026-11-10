@@ -1,7 +1,8 @@
 from scalar import Scalar
-from typing import Callable, Self, Any
+from typing import Callable, Self
 from enum import Enum
 from math import sqrt
+import numpy as np
 
 
 class MeanOptions(Enum):
@@ -16,8 +17,26 @@ BOTH = MeanOptions.BOTH
 
 
 class Vector:
-    def __init__(self, items: float | Scalar | list[float] | list[Scalar], name: str | None = None):
-        _items = items if isinstance(items, list) else [items]
+    def __init__(
+        self,
+        items: (
+            float
+            | np.float64
+            | Scalar
+            | list[float]
+            | list[Scalar]
+            | np.ndarray[tuple[int], np.dtype[np.float64]]
+        ),
+        name: str | None = None,
+    ):
+        if isinstance(items, np.ndarray) and items.ndim != 1:
+            raise ValueError(
+                f"'items=np.ndarray' provided to constructor of {type(self).__name__}(name=\"{name}\") has to have 'ndim=1'. Provided ndarray has 'ndim={items.ndim}'."
+            )
+
+        _items = (
+            list(items) if isinstance(items, list) or isinstance(items, np.ndarray) else [items]
+        )
         self.length: int = len(_items)
         self.items: list[Scalar] = [
             (
@@ -44,9 +63,26 @@ class Vector:
         return obj
 
     @classmethod
-    def _flex_new(cls, items: float | Scalar | list[float] | list[Scalar], name: str | None = None):
+    def _flex_new(
+        cls,
+        items: (
+            float
+            | np.float64
+            | Scalar
+            | list[float]
+            | list[Scalar]
+            | np.ndarray[tuple[int], np.dtype[np.float64]]
+        ),
+        name: str | None = None,
+    ):
         obj = cls.__new__(cls)
-        _items = items if isinstance(items, list) else [items]
+        if isinstance(items, np.ndarray) and items.ndim != 1:
+            raise ValueError(
+                f"'items=np.ndarray' provided to constructor of {cls.__name__}(name=\"{name}\") has to be 'ndim=1'. Provided ndarray has 'ndim={items.ndim}'."
+            )
+        _items = (
+            list(items) if isinstance(items, list) or isinstance(items, np.ndarray) else [items]
+        )
         obj.length = len(_items)
         obj.items = [
             (
@@ -64,8 +100,12 @@ class Vector:
         obj._hook = lambda self, other, out, op: None
         return obj
 
-    def setError(self, error: float | list[float]):
-        _error = error if isinstance(error, list) else [error]
+    def setError(
+        self, error: float | np.float64 | list[float] | np.ndarray[tuple[int], np.dtype[np.float64]]
+    ):
+        _error = (
+            list(error) if isinstance(error, list) or isinstance(error, np.ndarray) else [error]
+        )
         if len(_error) == self.length:
             for i, e in zip(self.items, _error):
                 i.setError(e)

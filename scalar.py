@@ -1,8 +1,9 @@
 from math import sqrt, log
+import numpy as np
 
 
 class Scalar:
-    def __init__(self, value: float, name: str | None = None):
+    def __init__(self, value: float | np.float64, name: str | None = None):
         self.value: float = float(value)
         self.name: str = name if isinstance(name, str) else str(value)
         self._error: float = 0.0
@@ -29,8 +30,8 @@ class Scalar:
         self._parentheses()
         return self
 
-    def setError(self, error: float):
-        self._error = error
+    def setError(self, error: float | np.float64):
+        self._error = float(error)
         self._dep[self] = 1.0
         self._update_error()
         return self

@@ -2,11 +2,20 @@ from scalar import Scalar
 from vector import Vector, MeanOptions, PROPAGATED, SEM, BOTH
 from typing import Any, Self, override
 
+import numpy as np
+
 
 class Measurement(Vector):
     def __init__(
         self,
-        data: float | Scalar | list[float] | list[Scalar],
+        data: (
+            float
+            | np.float64
+            | Scalar
+            | list[float]
+            | list[Scalar]
+            | np.ndarray[tuple[int], np.dtype[np.float64]]
+        ),
         name: str | None = None,
         unit: str | None = None,
     ):
