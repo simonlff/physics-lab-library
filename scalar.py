@@ -23,12 +23,18 @@ class Scalar:
         return self.name
 
     def _rounded(self):
-        first_pos: int = floor(log10(self.error))
-        first_dig: int = floor(round(self.error * 10 ** (-first_pos), 9))
-        last_rel_pos: int = first_pos - 1 if first_dig in {1, 2} else first_pos
-        out_err: float = ceil(round(self.error * 10 ** (-last_rel_pos), 9)) * 10 ** (last_rel_pos)
-        out_val: float = round(self.value, -last_rel_pos)
-        return (out_val, out_err)
+        if self.error != 0:
+            first_pos: int = floor(log10(self.error))
+            first_dig: int = floor(round(self.error * 10 ** (-first_pos), 9))
+            last_rel_pos: int = first_pos - 1 if first_dig in {1, 2} else first_pos
+            out_err: float = ceil(round(self.error * 10 ** (-last_rel_pos), 9)) * 10 ** (
+                last_rel_pos
+            )
+            out_val: float = round(self.value, -last_rel_pos)
+            return (out_val, out_err)
+
+        else:
+            return (self.value, 0.0)
 
     def _parentheses(self):
         self.name = f"({self.name})"

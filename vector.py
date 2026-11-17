@@ -148,9 +148,6 @@ class Vector:
             out.append(i._rounded())
         return out
 
-    def round(self):
-        return f"Vector()"
-
     def _value_repr(self):
         return f"[{" ".join([i._value_repr() for i in self.items])}]"
 
@@ -341,3 +338,5 @@ class Vector:
                     / (self.length() ** 2 - self.length())
                 )
                 return (self.sum() / self.length()).setError(stat).setName(f"μ{self.name}")
+
+    __array_ufunc__ = None
