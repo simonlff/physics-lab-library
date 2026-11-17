@@ -1,4 +1,4 @@
-from math import sqrt, log
+from math import sqrt, log, log10, ceil, floor
 import numpy as np
 
 
@@ -21,6 +21,14 @@ class Scalar:
 
     def _name_repr(self):
         return self.name
+
+    def _rounded(self):
+        first_pos: int = floor(log10(self.error))
+        first_dig: int = floor(round(self.error * 10 ** (-first_pos), 9))
+        last_rel_pos: int = first_pos - 1 if first_dig in {1, 2} else first_pos
+        out_err: float = ceil(round(self.error * 10 ** (-last_rel_pos), 9)) * 10 ** (last_rel_pos)
+        out_val: float = round(self.value, -last_rel_pos)
+        return (out_val, out_err)
 
     def _parentheses(self):
         self.name = f"({self.name})"
@@ -147,15 +155,26 @@ class Scalar:
         if not isinstance(other, Scalar):
             other = Scalar(other, name=str(other))
 
-        out_value = self.value**other.value
-        out_name = f"{self.name} ** {other.name}"
-        out = Scalar(out_value, out_name)
+        if all(v == 0.0 for v in other._dep.values()):
+            out_value = self.value**other.value
+            out_name = f"{self.name} ** {other.name}"
+            out = Scalar(out_value, out_name)
 
-        uniques = set(self._dep.keys()) | set(other._dep.keys())
-        for u in uniques:
-            out._dep[u] = other.value * (self.value ** (other.value - 1)) * self._dep.get(
-                u, 0.0
-            ) + log(self.value) * (self.value**other.value) * other._dep.get(u, 0.0)
+            for u in self._dep.keys():
+                out._dep[u] = (
+                    other.value * (self.value ** (other.value - 1)) * self._dep.get(u, 0.0)
+                )
+        else:
+            print("Full exp called!")
+            out_value = self.value**other.value
+            out_name = f"{self.name} ** {other.name}"
+            out = Scalar(out_value, out_name)
+
+            uniques = set(self._dep.keys()) | set(other._dep.keys())
+            for u in uniques:
+                out._dep[u] = other.value * (self.value ** (other.value - 1)) * self._dep.get(
+                    u, 0.0
+                ) + log(self.value) * (self.value**other.value) * other._dep.get(u, 0.0)
 
         out._update_error()
         return out

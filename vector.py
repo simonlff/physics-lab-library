@@ -1,7 +1,7 @@
 from scalar import Scalar
 from typing import Callable, Self
 from enum import Enum
-from math import sqrt
+from math import sqrt, floor, ceil, log10
 import numpy as np
 
 
@@ -37,7 +37,6 @@ class Vector:
         _items = (
             list(items) if isinstance(items, list) or isinstance(items, np.ndarray) else [items]
         )
-        self.length: int = len(_items)
         self.items: list[Scalar] = [
             (
                 item
@@ -46,7 +45,7 @@ class Vector:
             )
             for (i, item) in enumerate(_items)
         ]
-        if self.length == 1:
+        if len(_items) == 1:
             self.name: str = _items[0].name if isinstance(_items[0], Scalar) else str(_items[0])
         else:
             self.name = "vec"
@@ -56,7 +55,6 @@ class Vector:
     @classmethod
     def _new(cls, items: list[Scalar], name: str) -> Self:
         obj = cls.__new__(cls)
-        obj.length = len(items)
         obj.items = items
         obj.name = name
         obj._hook = lambda self, other, out, op: None
@@ -83,7 +81,6 @@ class Vector:
         _items = (
             list(items) if isinstance(items, list) or isinstance(items, np.ndarray) else [items]
         )
-        obj.length = len(_items)
         obj.items = [
             (
                 item
@@ -92,7 +89,7 @@ class Vector:
             )
             for (i, item) in enumerate(_items)
         ]
-        if obj.length == 1:
+        if len(_items) == 1:
             obj.name = _items[0].name if isinstance(_items[0], Scalar) else str(_items[0])
         else:
             obj.name = "vec"
@@ -103,10 +100,14 @@ class Vector:
     def setError(
         self, error: float | np.float64 | list[float] | np.ndarray[tuple[int], np.dtype[np.float64]]
     ):
+        if isinstance(error, np.ndarray) and error.ndim != 1:
+            raise ValueError(
+                f"'error=np.ndarray' provided to .setError() of {type(self).__name__}(name=\"{self.name}\") has to be 'ndim=1'. Provided ndarray has 'ndim={error.ndim}'."
+            )
         _error = (
             list(error) if isinstance(error, list) or isinstance(error, np.ndarray) else [error]
         )
-        if len(_error) == self.length:
+        if len(_error) == self.length():
             for i, e in zip(self.items, _error):
                 i.setError(e)
         elif len(_error) == 1:
@@ -114,7 +115,7 @@ class Vector:
                 i.setError(_error[0])
         else:
             raise ValueError(
-                f"Error must be of length 1 or same as Vector. Expected 1 or {self.length}, got {len(_error)}."
+                f"Error must be of length 1 or same as Vector. Expected 1 or {self.length()}, got {len(_error)}."
             )
         return self
 
@@ -123,14 +124,32 @@ class Vector:
         return self
 
     def broadcast(self, length: int):
-        if self.length == length:
+        if self.length() == length:
             return self
-        elif self.length == 1:
-            return Vector([self.items[0]] * length, self.name)
+        elif self.length() == 1:
+            return self._new([self.items[0]] * length, self.name)
         else:
             raise ValueError(
-                f'Self of length "{self.length}" not broadcastable to length: "{length}". Own length must be "1" or "{length}".'
+                f'Self of length "{self.length()}" not broadcastable to length: "{length}". Own length must be "1" or "{length}".'
             )
+
+    def length(self):
+        return len(self)
+
+    def values(self):
+        return np.array([i.value for i in self.items], dtype=np.float64)
+
+    def errors(self):
+        return np.array([i.error for i in self.items], dtype=np.float64)
+
+    def _rounded(self):
+        out: list[tuple[float, float]] = []
+        for i in self.items:
+            out.append(i._rounded())
+        return out
+
+    def round(self):
+        return f"Vector()"
 
     def _value_repr(self):
         return f"[{" ".join([i._value_repr() for i in self.items])}]"
@@ -143,6 +162,15 @@ class Vector:
 
     def __repr__(self):
         return f"Vector({self.name}: {self._value_repr()} ± {self._error_repr()})"
+
+    def __len__(self):
+        return len(self.items)
+
+    def __iter__(self):
+        yield from self.items
+
+    def __getitem__(self, key):
+        return self.items[key]
 
     def _rename_items(self, rename: Callable[[int, Scalar], str]):
         for i, item in enumerate(self.items):
@@ -159,13 +187,13 @@ class Vector:
                 other, name=other.name if isinstance(other, Scalar) else str(other)
             )
 
-        if self.length >= other.length:
+        if self.length() >= other.length():
             out_value = [
-                (s + o)() for (s, o) in zip(self.items, other.broadcast(self.length).items)
+                (s + o)() for (s, o) in zip(self.items, other.broadcast(self.length()).items)
             ]
         else:
             out_value = [
-                (s + o)() for (s, o) in zip(self.broadcast(other.length).items, other.items)
+                (s + o)() for (s, o) in zip(self.broadcast(other.length()).items, other.items)
             ]
         out_name = f"{self.name} + {other.name}"
         out = self._new(out_value, out_name)
@@ -188,13 +216,13 @@ class Vector:
                 other, name=other.name if isinstance(other, Scalar) else str(other)
             )
 
-        if self.length >= other.length:
+        if self.length() >= other.length():
             out_value = [
-                (s * o)() for (s, o) in zip(self.items, other.broadcast(self.length).items)
+                (s * o)() for (s, o) in zip(self.items, other.broadcast(self.length()).items)
             ]
         else:
             out_value = [
-                (s * o)() for (s, o) in zip(self.broadcast(other.length).items, other.items)
+                (s * o)() for (s, o) in zip(self.broadcast(other.length()).items, other.items)
             ]
 
         out_name = f"{self.name} * {other.name}"
@@ -243,13 +271,13 @@ class Vector:
                 other, name=other.name if isinstance(other, Scalar) else str(other)
             )
 
-        if self.length >= other.length:
+        if self.length() >= other.length():
             out_value = [
-                (s / o)() for (s, o) in zip(self.items, other.broadcast(self.length).items)
+                (s / o)() for (s, o) in zip(self.items, other.broadcast(self.length()).items)
             ]
         else:
             out_value = [
-                (s / o)() for (s, o) in zip(self.broadcast(other.length).items, other.items)
+                (s / o)() for (s, o) in zip(self.broadcast(other.length()).items, other.items)
             ]
 
         out_name = f"{self.name} / {other.name}"
@@ -273,11 +301,13 @@ class Vector:
                 other, name=other.name if isinstance(other, Scalar) else str(other)
             )
 
-        if self.length >= other.length:
-            out_value = [(s**o)() for (s, o) in zip(self.items, other.broadcast(self.length).items)]
+        if self.length() >= other.length():
+            out_value = [
+                (s**o)() for (s, o) in zip(self.items, other.broadcast(self.length()).items)
+            ]
         else:
             out_value = [
-                (s**o)() for (s, o) in zip(self.broadcast(other.length).items, other.items)
+                (s**o)() for (s, o) in zip(self.broadcast(other.length()).items, other.items)
             ]
         out_name = f"{self.name} ** {other.name}"
         out = self._new(out_value, out_name)
@@ -294,20 +324,20 @@ class Vector:
     def mean(self, mean_options: MeanOptions = MeanOptions.PROPAGATED):
         match mean_options:
             case MeanOptions.PROPAGATED:
-                return (self.sum() / self.length).setName(f"μ{self.name}")
+                return (self.sum() / self.length()).setName(f"μ{self.name}")
             case MeanOptions.SEM:
-                mean = sum([i.value for i in self.items]) / self.length
+                mean = sum([i.value for i in self.items]) / self.length()
                 stat = sqrt(
                     sum([(i.value - mean) ** 2 for i in self.items])
-                    / (self.length**2 - self.length)
+                    / (self.length() ** 2 - self.length())
                 )
-                out = self.sum() / self.length
+                out = self.sum() / self.length()
                 out._dep = {}
                 return out.setError(stat).setName(f"μ{self.name}")
             case MeanOptions.BOTH:
-                mean = sum([i.value for i in self.items]) / self.length
+                mean = sum([i.value for i in self.items]) / self.length()
                 stat = sqrt(
                     sum([(i.value - mean) ** 2 for i in self.items])
-                    / (self.length**2 - self.length)
+                    / (self.length() ** 2 - self.length())
                 )
-                return (self.sum() / self.length).setError(stat).setName(f"μ{self.name}")
+                return (self.sum() / self.length()).setError(stat).setName(f"μ{self.name}")

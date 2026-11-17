@@ -1,8 +1,11 @@
 from scalar import Scalar
 from vector import Vector, MeanOptions, PROPAGATED, SEM, BOTH
 from typing import Any, Self, override
+from math import log, floor, ceil
 
 import numpy as np
+
+ROUND_MEASUREMENTS = True
 
 
 class Measurement(Vector):
@@ -63,12 +66,30 @@ class Measurement(Vector):
         obj._hook = self._hook
         return obj
 
+    def _rounded(self):
+        out: list[tuple[str, str]] = []
+        for i in self.items:
+            erste = round(log(i.error))
+
+            out.append(("", ""))
+        return 0
+
     @override
     def __repr__(self):
         if self.unit != None:
             return f"Measurement({self.name}: {self._value_repr()} ± {self._error_repr()}, [{self.unit}])"
         else:
             return f"Measurement({self.name}: {self._value_repr()} ± {self._error_repr()})"
+
+    if ROUND_MEASUREMENTS:
+
+        @override
+        def _value_repr(self):
+            return f"[{" ".join([str(i._rounded()[0]) for i in self.items])}]"
+
+        @override
+        def _error_repr(self):
+            return f"[{" ".join([str(i._rounded()[1]) for i in self.items])}]"
 
     # def setError(self, error: float | list[float]):
     #     super().setError(error)
